@@ -16,7 +16,7 @@ class Actions(Enum):
     Buy = 1
     Sell = 2
 
-class FastTrainingStockTradeEnv(gym.Env):
+class LowRegulationStockTradeEnv(gym.Env):
 
     metadata = {'render.modes': ['human']}
 
@@ -102,27 +102,20 @@ class FastTrainingStockTradeEnv(gym.Env):
             self._done = True
         action_type = np.argmax(np.array(action[:3]))
         action_value = (action[-1])
-
-        trade = False
-        if action_type != Actions.Hold.value:
-            trade = True
-
-        if trade:
-            self._last_trade_tick = self._current_tick
-        add_to_step_reward,override_reward,inverse_total_reward = self.perform_action(action_type, action_value)
+        self._last_trade_tick = self._current_tick
+        self.perform_action(action_type, action_value)
         #calculate reward
         current_price = self.prices[self._current_tick]
-        
         self.update_networth()
-        if override_reward == False:
-            step_reward = ((self.current_networth - self.previous_networth) * 2) + add_to_step_reward
-        else:
-            step_reward = add_to_step_reward
-        if inverse_total_reward:
-            step_reward = (self.current_networth - self.previous_networth) * -1
+        step_reward = ((self.current_networth - self.previous_networth) * 1.3)
+        # if self._current_tick > 16:
+        #     #calculate % change in price compared to % change in networth. if both values are negative and within 5% of each other, punish, etc.
+        #     price_change_roc = (self.prices[self._current_tick-5] - self.prices[self._current_tick]) / 5
+        #     networth_change_roc = (self.history['networth'][self._current_tick-5-12] - self.history['networth'][self._current_tick-12]) / 5
+        #     if networth_change_roc < 0 and price_change_roc < 0 and np.absolute(price_change_roc - networth_change_roc) < 0.15:
+        #         step_reward -= (np.absolute(price_change_roc - networth_change_roc) * 3)
         if self.verbose == 2:
             print(f"       step reward: {step_reward}, og step reward: {self.current_networth - self.previous_networth}, add_to_step_reward: {add_to_step_reward}")
-        
         self.previous_networth = self.current_networth
         self._total_reward += step_reward
         observation = self._get_observation()
@@ -132,10 +125,6 @@ class FastTrainingStockTradeEnv(gym.Env):
         return observation, step_reward, self._done, info
 
     def perform_action(self, action_type, action_value):
-        override_reward = False
-        add_to_step_reward = 0
-        inverse_total_reward =False
-        #BUY
         if action_type == Actions.Buy.value:
             current_price = self.prices[self._current_tick]
             max_shares_purchasable = math.floor( self.current_balance / current_price )
@@ -146,13 +135,9 @@ class FastTrainingStockTradeEnv(gym.Env):
                 self.current_balance -= stocks_to_buy * current_price
                 self.shares_owned += stocks_to_buy
                 self.previous_trade_stock_price = current_price
-                prev_med_price = np.mean(np.array([self.prices[self._current_tick-5:self._current_tick]]))
-                add_to_step_reward = (prev_med_price-current_price) * action_value * 0.2
                 if self.verbose == 2:
                     print(f"        {self.stk_ticker}: Bought {stocks_to_buy} stock(s) for:{current_price}, networth: {self.current_networth}, shares: {self.shares_owned}")
             else:
-                add_to_step_reward = -2
-                override_reward = True
                 if self.verbose == 2:
                     print(f"        Tried to Buy. Unable.")
         #Sell
@@ -162,46 +147,20 @@ class FastTrainingStockTradeEnv(gym.Env):
             if stocks_to_sell > self.shares_owned:
                 stocks_to_sell = self.shares_owned
             if stocks_to_sell >= 1:
-                # add_to_step_reward = 1
                 self.current_balance += stocks_to_sell * current_price
                 self.shares_owned -= stocks_to_sell
-                # prev_med_price = np.mean(np.array([self.prices[self._current_tick-5:self._current_tick]]))
-                # add_to_step_reward = add_to_step_reward * action_value
-                # if add_to_step_reward > 0:
-                #     add_to_step_reward = add_to_step_reward * 0.8
-                # else:
-                #      add_to_step_reward = add_to_step_reward * 0.2
-
-                # prev_mean_networth = np.mean(self.history['networth'][self._current_tick-5:self._current_tick])
-                inverse_total_reward = True
-
                 if self.verbose == 2:
                     print(f"        {self.stk_ticker}: Sold {stocks_to_sell} stock(s) for:{current_price}, reward: {add_to_step_reward} networth: {self.current_networth}, shares: {self.shares_owned}")
             else:
-                override_reward = True
-                add_to_step_reward = -2
                 if self.verbose == 2:
                     print(f"        Tried to Sell. Unable.")
         #Hold
         else:
             if self.shares_owned >= 1 :
-                current_price = self.prices[self._current_tick]
-                prev_med_price = np.mean(np.array([self.prices[self._current_tick-5:self._current_tick]]))
-                add_to_step_reward = (current_price - prev_med_price)
-                add_to_step_reward = add_to_step_reward
-                if add_to_step_reward < 0:
-                    add_to_step_reward = add_to_step_reward * 1.01
                 if self.verbose == 2:
                     print(f"        {self.stk_ticker}: Held, networth: {self.current_networth}, shares: {self.shares_owned}")
 
-            else:
-                add_to_step_reward = -5
-                override_reward = True
-                if self.verbose == 2:
-                    print("Discouraging holding")
             
-        return add_to_step_reward, override_reward, inverse_total_reward
-
 
     def _get_observation(self):
         return self.signal_features[(self._current_tick -
