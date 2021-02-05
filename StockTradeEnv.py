@@ -56,7 +56,7 @@ class FastTrainingStockTradeEnv(gym.Env):
         self._end_tick = len(self.prices) - 1
         self._done = None
         #which step / tick / time step of the training data we are on
-        self._current_tick = None
+        self._current_tick = self._start_tick
         # the last step / tick / time step of the training data
         self._last_trade_tick = None
         self._total_reward = None
@@ -146,8 +146,10 @@ class FastTrainingStockTradeEnv(gym.Env):
                 self.current_balance -= stocks_to_buy * current_price
                 self.shares_owned += stocks_to_buy
                 self.previous_trade_stock_price = current_price
+                #Trying to force model to buy low
                 prev_med_price = np.mean(np.array([self.prices[self._current_tick-5:self._current_tick]]))
-                add_to_step_reward = (prev_med_price-current_price) * action_value * 0.2
+                add_to_step_reward = (prev_med_price-current_price) * 0.3
+
                 if self.verbose == 2:
                     print(f"        {self.stk_ticker}: Bought {stocks_to_buy} stock(s) for:{current_price}, networth: {self.current_networth}, shares: {self.shares_owned}")
             else:

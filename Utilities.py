@@ -16,6 +16,7 @@ import rl
 from StockTradeEnv import FastTrainingStockTradeEnv
 import quantstats as qs
 
+
 def eval_model(stk_ticker,model,verbose=0):
     """ evaluates a rl ml trading bot using the FastTrainingStockTradeEnv. """
     env = FastTrainingStockTradeEnv(ticker=stk_ticker,frame_bound=(100, 10000000), window_size=10,initial_balance=25000,verbose=verbose)
@@ -101,8 +102,5 @@ def plot_history(history,size):
     axs[2,1].text(s=txt,x=0.2,y=0.2,fontdict=font)
     fig.set_size_inches(size)
     return fig
-
-
-
 
 

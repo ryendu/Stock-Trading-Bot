@@ -115,7 +115,7 @@ class LowRegulationStockTradeEnv(gym.Env):
         #     if networth_change_roc < 0 and price_change_roc < 0 and np.absolute(price_change_roc - networth_change_roc) < 0.15:
         #         step_reward -= (np.absolute(price_change_roc - networth_change_roc) * 3)
         if self.verbose == 2:
-            print(f"       step reward: {step_reward}, og step reward: {self.current_networth - self.previous_networth}, add_to_step_reward: {add_to_step_reward}")
+            print(f"       step reward: {step_reward}")
         self.previous_networth = self.current_networth
         self._total_reward += step_reward
         observation = self._get_observation()
@@ -150,7 +150,7 @@ class LowRegulationStockTradeEnv(gym.Env):
                 self.current_balance += stocks_to_sell * current_price
                 self.shares_owned -= stocks_to_sell
                 if self.verbose == 2:
-                    print(f"        {self.stk_ticker}: Sold {stocks_to_sell} stock(s) for:{current_price}, reward: {add_to_step_reward} networth: {self.current_networth}, shares: {self.shares_owned}")
+                    print(f"        {self.stk_ticker}: Sold {stocks_to_sell} stock(s) for:{current_price},networth: {self.current_networth}, shares: {self.shares_owned}")
             else:
                 if self.verbose == 2:
                     print(f"        Tried to Sell. Unable.")
@@ -163,8 +163,8 @@ class LowRegulationStockTradeEnv(gym.Env):
             
 
     def _get_observation(self):
-        return self.signal_features[(self._current_tick -
-                                     self.window_size):self._current_tick]
+        # return self.signal_features[(self._current_tick - self.window_size):self._current_tick]
+        return self.signal_features[self._current_tick]
 
     def _update_history(self, info):
         if not self.history:
