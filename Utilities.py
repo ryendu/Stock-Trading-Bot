@@ -14,16 +14,38 @@ import yfinance as yf
 import gym_anytrading
 import rl
 from StockTradeEnv import FastTrainingStockTradeEnv
+from LowRegulationStockTradeEnv import LowRegulationStockTradeEnv
 import quantstats as qs
 
-
-def eval_model(stk_ticker,model,verbose=0):
-    """ evaluates a rl ml trading bot using the FastTrainingStockTradeEnv. """
-    env = FastTrainingStockTradeEnv(ticker=stk_ticker,frame_bound=(100, 10000000), window_size=10,initial_balance=25000,verbose=verbose)
+def get_stock_df_from_path(path):
+    df = pd.read_csv(path)
+    return df
+def eval_model_low_reg(stk_ticker,df,model,verbose=0):
+    """ evaluates a rl ml trading bot using the Low Regulation stock trade env."""
+    env = LowRegulationStockTradeEnv(ticker=stk_ticker,df=df,frame_bound=(100, 10000000), window_size=1,initial_balance=25000,verbose=verbose)
     observation = env.reset()
     itr = 0
     while True:
         observation = observation
+        observation = observation.reshape(1,-1)
+        action, _states = model.predict(observation)
+        observation, reward, done, info = env.step(action)
+        itr+=1
+        if done:
+            if verbose != 0:
+                print("info:", info)
+            print("iters:",itr)
+            break
+    return env
+
+def eval_model_fast_train(stk_ticker,df,model,verbose=0):
+    """ evaluates a rl ml trading bot using theFast Training stock trade env. """
+    env = FastTrainingStockTradeEnv(ticker=stk_ticker,df=df,frame_bound=(100, 10000000), window_size=10,initial_balance=25000,verbose=verbose)
+    observation = env.reset()
+    itr = 0
+    while True:
+        observation = observation
+        observation = observation.reshape(1,-1)
         action, _states = model.predict(observation)
         observation, reward, done, info = env.step(action)
         itr+=1

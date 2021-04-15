@@ -20,10 +20,13 @@ class LowRegulationStockTradeEnv(gym.Env):
 
     metadata = {'render.modes': ['human']}
 
-    def __init__(self, ticker, window_size, frame_bound,df=None,initial_balance=25000,verbose=1):
+    def __init__(self, ticker=None, window_size=1, frame_bound=(100,100000),df=None,initial_balance=25000,verbose=1):
         #verbose 1 = only print every 1000 steps along with some meta data. verbose 0 = print nothing. verbose 2 = print everything
-        self.stk_ticker = ticker
-        if df == None:
+        if ticker != None:
+            self.stk_ticker = ticker
+        else:
+            self.stk_ticker = "unknown"
+        if type(df) == None:
             df = yf.Ticker(ticker).history(period="max")
         #sets balance and shares owned, and net worth
         self.INITIAL_BALANCE = initial_balance
@@ -100,7 +103,10 @@ class LowRegulationStockTradeEnv(gym.Env):
 
         if self._current_tick == self._end_tick:
             self._done = True
-        action_type = np.argmax(np.array(action[:3]))
+        #THE index 0 only works if window size is 1 and neglets all other windows
+        action_type_one_hot = np.array(action[:3])
+        action_type = np.argmax(action_type_one_hot)
+        #index 0 is for the batch
         action_value = (action[-1])
         self._last_trade_tick = self._current_tick
         self.perform_action(action_type, action_value)
