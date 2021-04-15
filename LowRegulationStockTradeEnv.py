@@ -26,7 +26,7 @@ class LowRegulationStockTradeEnv(gym.Env):
             self.stk_ticker = ticker
         else:
             self.stk_ticker = "unknown"
-        if type(df) == None:
+        if type(df) == type(None):
             df = yf.Ticker(ticker).history(period="max")
         #sets balance and shares owned, and net worth
         self.INITIAL_BALANCE = initial_balance

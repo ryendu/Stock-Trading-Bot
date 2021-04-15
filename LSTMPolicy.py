@@ -3,6 +3,7 @@ from typing import Callable, Dict, List, Optional, Tuple, Type, Union
 import gym
 import torch as th
 from torch import nn
+from torch.nn import functional as F
 
 from stable_baselines3 import PPO
 from stable_baselines3.common.policies import ActorCriticPolicy
@@ -30,8 +31,8 @@ class CustomLSTM(BaseFeaturesExtractor):
         # Save output dimensions, used to create the distributions
         self.latent_dim_pi = last_layer_dim_pi
         self.latent_dim_vf = last_layer_dim_vf
-        hidden_=64 
-        layers=2 
+        hidden_=128 
+        layers=3
 
         # self.extract_net = nn.Sequential(
         #     ReshapeLayer(features_dim,(-1,1,features_dim)),
@@ -44,15 +45,21 @@ class CustomLSTM(BaseFeaturesExtractor):
         # )
 
         self.lstm1 = nn.LSTM(features_dim, hidden_, layers)
+        self.linear1 = nn.Linear(hidden_,hidden_)
         self.linear2 = nn.Linear(hidden_,2)
         self.flatten = nn.Flatten() 
+        #(num_layers * num_directions, batch, hidden_size), (num_layers * num_directions, batch, hidden_size)
+        self.state = (th.randn(layers, 1, hidden_),th.randn(layers, 1, hidden_))
  
     def forward(self, features: th.Tensor) -> th.Tensor:
         """
         :return: (th.Tensor, th.Tensor) latent_policy, latent_value of the specified network.
             If all layers are shared, then ``latent_policy == latent_value``
         """
-        out,states=self.lstm1(features)
+        out, self.state=self.lstm1(features, self.state)
+        out = F.relu(out)
+        out = self.linear1(out)
+        out = F.relu(out)
         out = self.linear2(out)
         out = out.view(-1,2)
         return out
